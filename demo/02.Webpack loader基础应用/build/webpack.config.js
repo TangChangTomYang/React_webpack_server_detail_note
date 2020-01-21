@@ -4,6 +4,9 @@
 // 引入node 中的 path模块, 后面使用绝对路径防止路径错误
 const path = require('path')
 
+// 引入 html-webpack-plugin 将js 代码转为html
+const HTMLPlugin = require('html-webpack-plugin')
+
 
 
 // 导出一个webpack配置对象
@@ -30,10 +33,11 @@ module.exports = {
 
         // 2.3 指定静态资源引用的路径
         // 生成的路径是 /public/app.hash.js
-        publicPath : '/public'
+        publicPath : ''
     },
 
     // 因为JSX是HTML和JS的混合, 默认webpack 是不认识的. 我们要配置一下loader来解析
+    // 配置各种loader
     module :{
         rules : [
             {
@@ -45,8 +49,21 @@ module.exports = {
                 // 因为 babel-loader 只是babel-core的一个插件, 因此我们还需要安装 babel-core, npm install babel-core -D
                 loader: 'babel-loader'
             }
+            ,
+            {   // 配置 当前项目下所有的 .js 文件按照 jsx语法让babel处理, 除了  node_modules 目录
+                test: /.js$/ ,
+                loader: 'babel-loader',
+                exclude : [
+                    path.join(__dirname, '../node_modules')
+                ]
+            }
         ]
-    }
+    },
+
+    // 配置各种插件
+    plugins : [
+        new HTMLPlugin()
+    ]
 
 
 }

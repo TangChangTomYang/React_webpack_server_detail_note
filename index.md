@@ -323,6 +323,10 @@ import ReactDOM  from 'react-dom'
 import App from './App.jsx'
 ```
 
+> 注意:
+>
+> 在此处我们引入 `App.jsx` 文件是需要带后缀`.jsx` 的, 因为我们还没有配置忽略后缀的功能, 后面我们配置了忽略后缀后, 在整个工程项目中, 我们在引入某些项目文件时就可以省略文件后缀名, 只需要在引入文件时提供文件的名称即可, 这一点需要注意一下. 
+
 3、让ReactDOM 执行render方法, 将组件App挂载到页面上某个标签上
 
 ```
@@ -365,11 +369,13 @@ ReactDOM.render(App, document.body);
     > - `rules`  对应的是一个数组,说明有哪些loader.具体 loader的描述信息使用`{}` 说明, 比如: 使用什么loader, 处理哪些哪类文件.
     >   - `loader`: 用于指定loader的名字(即使用哪个loader), 比如: 此处使用的是`babel-loader`
     >   - `test` :   就是说明loader要处理哪个 、哪些文件. 比如: 此处使用正则`/.jsx$` 表示使用`babel-loader` 处理使用的 `.jsx` 文件
-
+>
+    > 其实依据话, rules 就是用来配置loader的, 说明有哪些loader, 每个loader处理哪些问题, 就这么简单
+  
   
 
   
-> webpack.config.js 的详细内容如下:
+  > webpack.config.js 的详细内容如下:
   
   ```
   const path = require('path')
@@ -395,9 +401,9 @@ ReactDOM.render(App, document.body);
                   loader: 'babel-loader'
               }
           ]
-      } 
+    } 
   }
-```
+  ```
   
 
 
@@ -453,16 +459,246 @@ babel 是一个能够编译各种最新JS语法的工具, 它编译出来的是�
   ```
   npm install babel-core babel-preset-es2015 babel-preset-es2015-loose babel-preset-react -D
   ```
+  
+
+
+
+**提示:** 
+
+到目前为止, 我们整个React项目的基本配置已经完成了, 我们已经可以使用webpack将我们的React代码(即, jsx代码) 编译成ES5的javaScript代码了. 我们使用命令`npm run build` 是没问题的了. 
+
+但是, 但是, 现在我们依然不能在浏览器上打开我们的代码, 我们还需要完成下面的步骤: 安装 **html-webpack-plugin 插件**
+
+
+
+
+
+####5、安装 html-webpack-plugin 插件
+
+
+
+- 安装 html-webpack-plugin 插件
+
+  ```
+  npm install html-webpack-plugin -D // 因为是开发依赖, 任然要使用 -D 安装
+  ```
+
+- 在webpack.config.js文件中配置plugins插件
+
+  - 在webpack.config.js文件中导入`html-webpack-plugin`插件
+
+    ```
+    const HTMLPlugin = require("html-webpack-plugin");
+    ```
+
+  - 在webpack.config.js 文件中增加 plugins 字段, 描述所有的插件
+
+    - plugins 对应的是一个数组, 里面可以有很多的插件
+
+    ```
+    plugins : [
+    	new HTMLPlugin()
+    ]
+    ```
+
+- 配置完成后的webpack.config.js 文件内容如下:
+
+  ```
+  const path = require('path') 
+  const HTMLPlugin = require('html-webpack-plugin')
+  
+  module.exports = {
+  
+      // 配置 webpack 入口文件信息
+      entry : {
+          app : path.join(__dirname, '../client/app.js')
+      }, 
+      // 2. 配置 webpack打包 输出信息
+      output : { 
+          filename: '[name].[hash].js', 
+          path: path.join(__dirname, '../dist'), 
+          publicPath : '/public'
+      },
+   
+      // 配置各种loader
+      module :{
+          rules : [
+              {
+                  // 正则匹配所有的jsx文件
+                  test: /.jsx$/ , 
+                  loader: 'babel-loader'
+              }
+          ]
+      },
+  
+      // 配置各种插件
+      plugins : [
+          new HTMLPlugin()
+      ] 
+  }
+  
+  
+  ```
+
+   
+
+- html-webpack-plugin 插件使用的总结
+
+  我们编写的react代码(jsx 代码) 经过webpack 打包后直接生成的是一个 `.js` 文件, 不能直接在浏览器上运行, 我们借助`html-webpack-plugin` 插件, 可以将webpack打包生成的`js` 代码生成`.html` 文件 同时, 它会将webpack.config.js文件里面的`entry` 注入到里面. 且文件的路径也根据`webpack.config.js` 里面 的`output` 配置拼接起来的
+
+    ![Snip20200121_1](images/Snip20200121_1.png) 
+
+  从上图我们可以看到, 在index.html文件中就通过 script标签引用了我们webpack打包生成的app . 通过 html-webpack-plugin 插件, 可以将经过webpack打包的js文件了, 但是, 因为我们现在没有写任何服务器,也没有做任何路径的映射, 所以我们直接打开HTML文件是不能访问到里面js文件内容的
+
+ 
+
+#### 6、不启用本地服务,直接使用chrome打开 index.html 文件(坑多)
+
+- 1、当我们直接在webstorm中直接使用`Chrome` 打开webpack 为我们生成的`index.html`后,  我们会发现在`index.html` 中引入的`app.03c7f44996b46ae3eb17.js` 文件无法加载,如下图:
+
+  ![Snip20200121_1](images/Snip20200121_2.png) 
+
+  经过分析, 我们发现是因为我们在webpack.config.js的outpu配置项中, 配置了`publicPath: '/public'` , 导致生成的index.html中script标签在引入js文件时, 文件路径前有`/public` , 因为我们没有启动本地server服务, 自然直接打开index.html 时加载`.js` 文件失败.  
+
+- 2、为了直接打开index.html文件能正常加载`.js` 文件, 我们重新配置的 `webpack.config.js` 文件,配置 `publicPath: ''` ,如下: 
+
+  ```
+  const path = require('path')
+  const HTMLPlugin = require('html-webpack-plugin')
+  module.exports = {
+      entry : {
+          app : path.join(__dirname, '../client/app.js')
+      },
+      output : {
+          filename: '[name].[hash].js',
+          path: path.join(__dirname, '../dist'),
+          publicPath : ''
+      },
+      module :{
+          rules : [
+              {
+                  test: /.jsx$/ ,
+                  loader: 'babel-loader'
+              }
+          ]
+      },
+      plugins : [
+          new HTMLPlugin()
+      ]
+  }
+  ```
+
+  修改了, 我们发现依然不能直接运行`index.html` 文件, 后面我们又经过分析, 发现是我们在编写`app.js`时,出了问题, 我们在调用 `ReactDOM.render` 函数时也要按照JSX的语法书写, 且在文件的最前面也需要导入`react` 模块, 正确的书写代码如下:
+
+  
+
+- 3、修改 app.js 文件
+
+  ```
+  import  React from 'react'        // 导入react模块
+  import ReactDOM  from 'react-dom'	// 导入react-dom模块,将react组件渲染到DOM里
+   
+  import App from './App.jsx'	// 导入我们自己写的react组件 App
+   
+  ReactDOM.render(<App /> , document.body);	// 调用ReactDOM.render 方法时, react组件 App 需要按照jsx语法书写使用 '< />' 包裹
+  ```
+
+- 4、让webpack中的babel-loader能够将`app.js` 也按照jsx语法编译
+
+  我们为什么要让`babel-loader` 将`app.js` 文件按照JSX的语法编译呢? 
+
+  是这样的,我们在`app.js` 文件中调用了`ReactDOM.render` 函数, render函数 使用了JSX语法, 因此我们需要使用babel-loader 编译它. 
+
+  - 为了让 babel-loader能够编译 `app.js` 文件, 我们在webpack.config.js中需要额外的配置, 其配置方式有2种:
+
+    - 一种是, 明确的指定babel-loader, 要将`app.js` 这个文件编译(这种做法不推荐), 具体做法如下:
+
+      ```
+      const path = require('path') 
+      const HTMLPlugin = require('html-webpack-plugin')
+       
+      module.exports = { 
+          entry : {
+              app : path.join(__dirname, '../client/app.js')
+          },
+          output : { 
+              filename: '[name].[hash].js', 
+              path: path.join(__dirname, '../dist'), 
+              publicPath : ''
+          }, 
+          module :{
+              rules : [
+                  { 
+                      test: /.jsx$/ , 
+                      loader: 'babel-loader'
+                  }
+                  ,
+                  {  
+                      test: /app.js$/,   //明确要匹配app.js文件
+                      loader: 'babel-loader'  
+                   }
+              ]
+          }, 
+          plugins : [
+              new HTMLPlugin()
+          ] 
+      }
+      ```
+
+    - 在配置babel-loader的时候, 指定匹配的类型,排除不匹配的文件路径**(推荐)**
+
+      >  包含一部分,排除一部分
+
+      ```
+      const path = require('path')
+      const HTMLPlugin = require('html-webpack-plugin')
+      
+      module.exports = {
+          entry : {
+              app : path.join(__dirname, '../client/app.js')
+          },
+      
+          output : {
+              filename: '[name].[hash].js',
+              path: path.join(__dirname, '../dist'),
+              publicPath : ''
+          },
+      
+          module :{
+              rules : [
+                  { 
+                      test: /.jsx$/ ,   // 所有的 .jsx 文件按照react编译
+                      loader: 'babel-loader'
+                  }
+                  ,
+                  {
+                      test: /.js$/ , // 所有的除了 exclude 目录下的 .js文件按照react语法编译
+                      loader: 'babel-loader',
+                      exclude : [
+                           path.join(__dirname, '../node_modules')
+                      ]
+                  }
+              ]
+          },
+      
+          // 配置各种插件
+          plugins : [
+              new HTMLPlugin()
+          ] 
+      }
+      
+      
+      ```
+
+      
 
 
 
 
 
 
-
-
-
-
+>  到此, webpack load 基础应用的配置就完了, index.html 文件可以直接运行打开了
+>
 >  更详细的说明看demo:  `02.Webpack loader基础应用` 
 
 
